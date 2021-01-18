@@ -1,0 +1,76 @@
+---
+title: "Concept for calculating mortality"
+output: html_document
+---
+# Concept for calculating age dependent mortality
+## Do imports
+```{r include = F}
+library(cbsodataR)
+library(reshape2)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(knitr)
+```
+
+## Retrieve data
+```{r}
+stmeta <- cbs_get_meta("70895ned")
+
+sterftedata <- data.frame(cbs_get_data(id = "70895ned", Geslacht = "1100", Perioden = has_substring("JJ")))
+
+kable(sterftedata, caption = "Sterftedata")
+```
+
+## Select older pop
+```{r}
+bevolkingdata <- data.frame(cbs_get_data(id = "37296ned", select = c(
+  "Perioden", "TotaleBevolking_1", "k_65Tot80Jaar_13",
+  "k_80JaarOfOuder_14"
+), typed = F))
+
+
+bevolkingdata$tot65 <- bevolkingdata[, 2] - bevolkingdata[, 3] - bevolkingdata[, 4]
+names(bevolkingdata)[2:5] <- c("10000", "53950", "21700", "41700")
+bevolkingdata <- melt(bevolkingdata, id.vars = "Perioden")
+names(bevolkingdata)[2:3] <- c("LeeftijdOp31December", "Aantal")
+
+kable(bevolkingdata, caption = "Bevolkingsdata")
+```
+
+## Add mortality by pop
+```{r}
+data <- merge(bevolkingdata, sterftedata)
+data$Mortaliteit <- data$Overledenen_1 / data$Aantal
+
+kable(data, caption = "Bevolking met mortaliteit")
+```
+
+## Merge with other stuff
+```{r}
+data <- merge(data, stmeta[5]$LeeftijdOp31December[, 1:2], by.x = "LeeftijdOp31December", by.y = "Key")
+names(data)[7] <- "Leeftijd"
+data$Jaar <- as.numeric(as.character(substr(data$Perioden, 1, 4)))
+data$Leeftijd[data$Leeftijd == "Totaal leeftijd"] <- "Totaal (leeftijdsonafhankelijk)"
+
+kable(data, caption = "Totalen met leeftijdscategorien")
+```
+
+## Have fun with plots
+```{r}
+(ggplot(data, aes(x = Jaar, y = Mortaliteit, col = Leeftijd)) +
+  geom_line() +
+  ggtitle("Leeftijdscategorieafhankelijke mortaliteit per jaar") +
+  theme_bw()) %>%
+  ggplotly()
+```
+
+
+```{r}
+(ggplot(data, aes(x = Jaar, y = Mortaliteit, col = Leeftijd)) +
+  geom_line() +
+  ggtitle("Leeftijdscategorieafhankelijke mortaliteit per jaar") +
+  coord_cartesian(ylim = c(0, 0.01)) +
+  theme_bw()) %>%
+  ggplotly()
+```
