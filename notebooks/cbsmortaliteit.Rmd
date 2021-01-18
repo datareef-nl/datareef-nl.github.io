@@ -1,6 +1,7 @@
 ---
 title: "Concept for calculating mortality"
-output: html_document
+output:
+  html_document: default
 ---
 # Concept for calculating age dependent mortality
 ## Do imports
@@ -10,7 +11,7 @@ library(reshape2)
 library(ggplot2)
 library(plotly)
 library(dplyr)
-library(knitr)
+library(rmarkdown)
 ```
 
 ## Retrieve data
@@ -19,7 +20,7 @@ stmeta <- cbs_get_meta("70895ned")
 
 sterftedata <- data.frame(cbs_get_data(id = "70895ned", Geslacht = "1100", Perioden = has_substring("JJ")))
 
-kable(sterftedata, caption = "Sterftedata")
+paged_table(sterftedata)
 ```
 
 ## Select older pop
@@ -35,7 +36,7 @@ names(bevolkingdata)[2:5] <- c("10000", "53950", "21700", "41700")
 bevolkingdata <- melt(bevolkingdata, id.vars = "Perioden")
 names(bevolkingdata)[2:3] <- c("LeeftijdOp31December", "Aantal")
 
-kable(bevolkingdata, caption = "Bevolkingsdata")
+paged_table(bevolkingdata)
 ```
 
 ## Add mortality by pop
@@ -43,7 +44,7 @@ kable(bevolkingdata, caption = "Bevolkingsdata")
 data <- merge(bevolkingdata, sterftedata)
 data$Mortaliteit <- data$Overledenen_1 / data$Aantal
 
-kable(data, caption = "Bevolking met mortaliteit")
+paged_table(data)
 ```
 
 ## Merge with other stuff
@@ -53,7 +54,7 @@ names(data)[7] <- "Leeftijd"
 data$Jaar <- as.numeric(as.character(substr(data$Perioden, 1, 4)))
 data$Leeftijd[data$Leeftijd == "Totaal leeftijd"] <- "Totaal (leeftijdsonafhankelijk)"
 
-kable(data, caption = "Totalen met leeftijdscategorien")
+paged_table(data)
 ```
 
 ## Have fun with plots
